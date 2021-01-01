@@ -67,4 +67,6 @@ for nepoch in range(8):
     print('Epoch %d :Evaluation accuracy on eval images, %2.2f'%(nepoch,  top1.avg))
     break
 
+# two ways of saving model
 torch.jit.save(torch.jit.script(quantized_model), saved_model_dir + scripted_quantized_model_file)
+torch.jit.save(torch.jit.trace(quantized_model,(torch.randn((1,3,224,224)))), saved_model_dir + scripted_quantized_model_file)
