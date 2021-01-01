@@ -3,6 +3,7 @@ import torch
 from torch.nn import Module
 from abc import ABCMeta, abstractmethod
 from functools import partial
+from torch.quantization import QConfig
 
 def _with_args(cls_or_self, **kwargs):
     r"""Wrapper that allows creation of class factories.
@@ -63,6 +64,7 @@ class baseFQ(Module,metaclass=ABCMeta):
                                                         missing_keys, unexpected_keys, error_msgs)
 
 class example_FQ(baseFQ):
+    with_args = classmethod(_with_args)
     def __init__(self, quant_min=0, quant_max=255,ch_axis=0,averaging_constant=0.01):
         super(example_FQ, self).__init__()
         assert quant_min <= quant_max, \
@@ -95,3 +97,6 @@ class example_FQ(baseFQ):
         X = torch.fake_quantize_per_channel_affine(X, scale, zp,
                                                            self.ch_axis, self.quant_min, self.quant_max)
         return X
+
+
+Example_Qconifg =QConfig(weight = example_FQ.with_args(quant_min=-128,quant_max=127),activation=example_FQ.with_args(quant_min=0,quant_max=255))
