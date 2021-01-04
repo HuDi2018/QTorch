@@ -12,6 +12,10 @@ _FUSETREE = {'son':{torch.nn.Conv2d:_CONV_BRANCH,torch.nn.Linear:_NN_BRANCH},'ca
 def fuse_module(module, inplace = False):
     if not inplace:
         module = copy.deepcopy(module)
+    _fuse_module_helper(module)
+    return module
+
+def _fuse_module_helper(module):
     names = []
     tmpTree = _FUSETREE
     for name,child in module.named_children():
@@ -19,7 +23,7 @@ def fuse_module(module, inplace = False):
             tmpTree = tmpTree['son'][type(child)]
             names.append(name)
         else:
-            fuse_module(child)
+            _fuse_module_helper(child)
             if tmpTree['can_be_fused']:
                 torch.quantization.fuse_modules(module,names,inplace=True)
                 names = []
@@ -27,18 +31,18 @@ def fuse_module(module, inplace = False):
     if tmpTree['can_be_fused']:
         torch.quantization.fuse_modules(module,names,inplace=True)
 
-QCONFIGS = {} #use class method
-def propagate_qconfig(module,qconfig=None,inplace=False):
-    if not inplace:
-        module = copy.deepcopy(module)
-    module.qconfig = QCONFIGS[getattr(module,'qconfig',qconfig)]
-    if module.config is None:
-        raise Exception('not qconfig passed in or set in module')
-    for name, child in module.named_children():
-        propagate_qconfig(child,qconfig)
-
-def prepare(model,inplace=False):
-    assert hasattr(model,'qconfig')
-    propagate_qconfig(model,qconfig=model.qconfig,inplace=inplace)
-    add_observer_(model)
-    return model
+# QCONFIGS = {} #use class method
+# def propagate_qconfig(module,qconfig=None,inplace=False):
+#     if not inplace:
+#         module = copy.deepcopy(module)
+#     module.qconfig = QCONFIGS[getattr(module,'qconfig',qconfig)]
+#     if module.config is None:
+#         raise Exception('not qconfig passed in or set in module')
+#     for name, child in module.named_children():
+#         propagate_qconfig(child,qconfig)
+#
+# def prepare(model,inplace=False):
+#     assert hasattr(model,'qconfig')
+#     propagate_qconfig(model,qconfig=model.qconfig,inplace=inplace)
+#     add_observer_(model)
+#     return model

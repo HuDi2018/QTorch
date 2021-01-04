@@ -6,7 +6,7 @@ import torchvision
 import torchvision.transforms as transforms
 from example.example_util import prepare_data_loaders,print_size_of_model,evaluate,train_one_epoch,MobileNetV2
 from FakeQuantizer.base import Example_Qconifg
-from utils.Quant import propagate_qconfig,prepare
+from utils.Quant import fuse_module
 
 # # Setup warnings
 import warnings
@@ -37,14 +37,14 @@ eval_batch_size = 30
 data_loader, data_loader_test = prepare_data_loaders(data_path,train_batch_size,eval_batch_size)
 
 # mdoel setting
-float_model = MobileNetV2().cuda()
-weights = torch.load(os.path.join(saved_model_dir,float_model_file))
+float_model = MobileNetV2()#.cuda()
+weights = torch.load(os.path.join(saved_model_dir,float_model_file),map_location='cpu')
 float_model.load_state_dict(weights)
-float_model.fuse_model()
-propagate_qconfig(float_model,Example_Qconifg,inplace=True)
-fake_quantized_model = prepare(float_model)
-# float_model.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
-# fake_quantized_model = torch.quantization.prepare_qat(float_model, inplace=False)
+float_model = fuse_module(float_model)
+# propagate_qconfig(float_model,Example_Qconifg,inplace=True)
+# fake_quantized_model = prepare(float_model)
+float_model.qconfig = Example_Qconifg
+fake_quantized_model = torch.quantization.prepare_qat(float_model, inplace=False)
 print('Inverted Residual Block: After preparation for QAT, note fake-quantization modules \n',fake_quantized_model.features[1].conv)
 
 # loss and optimizer
